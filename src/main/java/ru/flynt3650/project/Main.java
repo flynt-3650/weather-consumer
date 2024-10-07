@@ -3,9 +3,9 @@ package ru.flynt3650.project;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
-import org.knowm.xchart.SwingWrapper;
 import org.springframework.http.HttpEntity;
 import org.springframework.web.client.RestTemplate;
 
@@ -31,13 +31,21 @@ public class Main {
         String measurementPostUrl = "http://localhost:8080/measurements/add";
 
         for (int i = 0; i < 100; i++) {
-            double temperature = rand.nextDouble(-100, 100);
+            double temperature = roundTo2DecimalPlaces(rand.nextDouble(-100, 100));
             boolean isRaining = rand.nextBoolean();
             HttpEntity<Map<String, Object>> postMeasurementRequest = getMapHttpEntity(temperature, isRaining);
 
             String postResponse = REST_TEMPLATE.postForObject(measurementPostUrl, postMeasurementRequest, String.class);
             System.out.println("Post response for measurement " + (i + 1) + ": " + postResponse);
         }
+    }
+
+    private static double roundTo2DecimalPlaces(double value) {
+
+        long factor = (long) Math.pow(10, 2);
+        value = value * factor;
+        long tmp = Math.round(value);
+        return (double) tmp / factor;
     }
 
     private static HttpEntity<Map<String, Object>> getMapHttpEntity(double temperature, boolean isRaining) {
@@ -99,8 +107,8 @@ public class Main {
     public static void main(String[] args) {
         postNewSensor();
         post100RandomMeasurements();
-        String response = getMeasurements();
-        List<Double> temperatures = extractTemperatures(response);
+        List<Double> temperatures = extractTemperatures(getMeasurements());
+        System.out.println(temperatures);
         plotTemperatures(temperatures);
     }
 }
