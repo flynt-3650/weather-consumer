@@ -1,11 +1,15 @@
 package ru.flynt3650.project;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.knowm.xchart.XYChart;
+import org.knowm.xchart.XYChartBuilder;
+import org.knowm.xchart.SwingWrapper;
 import org.springframework.http.HttpEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class Main {
 
@@ -36,27 +40,67 @@ public class Main {
         }
     }
 
-    public static void get100RandomMeasurements() {
-        String getUrl = "http://localhost:8080/measurements";
-        String getResponse = REST_TEMPLATE.getForObject(getUrl, String.class);
-        System.out.println("Get response: " + getResponse);
-    }
-
     private static HttpEntity<Map<String, Object>> getMapHttpEntity(double temperature, boolean isRaining) {
-        Map<String, Object> sensorMap = new HashMap<>();
+        // create 'sensor' object
+        Map<String, String> sensorMap = new HashMap<>();
         sensorMap.put("name", "sensor new");
 
+        // create 'measurement' object
         Map<String, Object> measurementMap = new HashMap<>();
         measurementMap.put("temperature", temperature);
-        measurementMap.put("sensor", sensorMap);
+        measurementMap.put("sensor", sensorMap); // insert 'sensor' object into 'measurement' object
         measurementMap.put("raining", isRaining);
 
         return new HttpEntity<>(measurementMap);
     }
 
+    public static String getMeasurements() {
+        String getUrl = "http://localhost:8080/measurements";
+        return REST_TEMPLATE.getForObject(getUrl, String.class);
+    }
+
+    public static List<Double> extractTemperatures(String json) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode;
+        try {
+            rootNode = objectMapper.readTree(json);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        List<Double> temperatures = new ArrayList<>();
+        for (JsonNode node : rootNode) {
+            double temperature = node.path("temperature").asDouble();
+            temperatures.add(temperature);
+        }
+
+        return temperatures;
+    }
+
+    public static void plotTemperatures(List<Double> temperatures) {
+        List<Integer> xData = new ArrayList<>();
+        for (int i = 0; i < temperatures.size(); i++) {
+            xData.add(i + 1);
+        }
+
+        XYChart chart = new XYChartBuilder()
+                .width(800)
+                .height(600)
+                .title("Temperature Measurements")
+                .xAxisTitle("Measurement Number")
+                .yAxisTitle("Temperature")
+                .build();
+
+        chart.addSeries("Temperature", xData, temperatures);
+
+        new SwingWrapper<>(chart).displayChart();
+    }
+
     public static void main(String[] args) {
         postNewSensor();
         post100RandomMeasurements();
-        get100RandomMeasurements();
+        String response = getMeasurements();
+        List<Double> temperatures = extractTemperatures(response);
+        plotTemperatures(temperatures);
     }
 }
